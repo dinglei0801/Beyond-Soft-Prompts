@@ -117,7 +117,6 @@ class MyDataset(Dataset):
         # Index of dataframe has direct correspondence to item in dataset
         self.df = self.df.assign(id=self.df.index.values)
 
-        # 这个的数据集处理是将label按照str名字读取的
         # Convert arbitrary class names of dataset to ordered 0-(num_speakers - 1) integers
         self.unique_characters = sorted(self.df['class_name'].unique())
         self.class_name_to_id = {self.unique_characters[i]: i for i in range(self.num_classes())}
