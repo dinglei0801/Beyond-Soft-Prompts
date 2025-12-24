@@ -8,22 +8,16 @@ from cross_domain_losses import CrossDomainLoss
 from cross_domain_data_loader import init_cross_domain_dataloader, get_cross_domain_label_dict
 
 def cross_domain_test_single_target(args):
-    """在单个目标域上测试已训练的模型"""
-    
-    # 加载训练好的模型
     model = CrossDomainMetaModel(args)
     model.load_state_dict(torch.load(args.model_path))
     model.eval()
     
     print(f"Testing model trained on {args.source_domain} on target domain {args.target_domain}")
     
-    # 初始化目标域测试数据加载器
     test_dataloader, test_dataset = init_cross_domain_dataloader(args, 'test', [args.target_domain])
     
-    # 初始化损失函数
     loss_fn = CrossDomainLoss(args)
     
-    # 测试
     test_results = []
     with torch.no_grad():
         for batch in tqdm(test_dataloader, desc=f"Testing on {args.target_domain}"):
@@ -33,10 +27,8 @@ def cross_domain_test_single_target(args):
                 support_set, query_set, episode_labels = batch
                 episode_domain = args.target_domain
             
-            # 处理数据
             text, labels, domains = deal_cross_domain_data(support_set, query_set, episode_labels)
             
-            # 获取标签文本
             if episode_domain in get_cross_domain_label_dict(episode_domain):
                 label_dict = get_cross_domain_label_dict(episode_domain)
                 id2label = {v: k for k, v in label_dict.items()}
@@ -44,10 +36,8 @@ def cross_domain_test_single_target(args):
             else:
                 label_text = episode_labels
             
-            # 前向传播
             model_outputs = model(text, label_text, episode_domain)
             
-            # 计算损失和指标
             loss, p, r, f, acc, auc, topk_acc = loss_fn(model_outputs, labels, domains)
             
             test_results.append({
@@ -60,12 +50,10 @@ def cross_domain_test_single_target(args):
                 'topk_acc': topk_acc
             })
     
-    # 计算平均结果
     avg_results = {}
     for key in test_results[0].keys():
         avg_results[key] = float(np.mean([result[key] for result in test_results]))
     
-    # 保存结果
     result_data = {
         'source_domain': args.source_domain,
         'target_domain': args.target_domain,
@@ -85,7 +73,6 @@ def cross_domain_test_single_target(args):
     return avg_results
 
 def deal_cross_domain_data(support_set, query_set, episode_labels):
-    """处理跨域数据"""
     text, labels, domains = [], [], []
 
     for x in support_set:
@@ -97,8 +84,6 @@ def deal_cross_domain_data(support_set, query_set, episode_labels):
         text.append(x["text"])
         labels.append(x["label"])
         domains.append(x.get("domain", "unknown"))
-
-    # 转换标签为one-hot
     label_ids = []
     for label in labels:
         tmp = []
@@ -133,7 +118,6 @@ if __name__ == "__main__":
     parser.add_argument('--T', type=int, default=5)
     parser.add_argument('--domain_loss_weight', type=float, default=0.1)
     parser.add_argument('--adversarial_loss_weight', type=float, default=0.01)
-    # 添加其他必要参数...
     
     args = parser.parse_args()
     cross_domain_test_single_target(args)
